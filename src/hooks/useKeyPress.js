@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 
 const useKeyPress = (targetKeyCode) => {
   const [keyPressed, setKeyPressed] = useState(false);
@@ -22,7 +22,7 @@ const useKeyPress = (targetKeyCode) => {
       document.removeEventListener('keydown', keyDownHandler);
       document.removeEventListener('keyup', keyUpHandler);
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return keyPressed;
 };

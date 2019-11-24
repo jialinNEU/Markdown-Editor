@@ -21,7 +21,7 @@ const FileList = ({
     setValue('');
   };
 
-  useEffect(() => {
+  useEffect(() => {  // eslint-disable-line react-hooks/exhaustive-deps
     if (enterPressed && editStatus) {
       const editItem = files.find(file => file.id === editStatus);
       onSaveEdit(editItem.id, value);
@@ -39,7 +39,7 @@ const FileList = ({
         files.map(file => (
           <li
             key={file.id}
-            className="list-group-item bg-light row d-flex align-items-center"
+            className="list-group-item bg-light row d-flex align-items-center mx-0"
           >
             {
               (file.id !== editStatus) && (
@@ -47,12 +47,12 @@ const FileList = ({
                   <span className="col-2">
                     <FontAwesomeIcon size="lg" icon={faMarkdown} />
                   </span>
-                  <span className="col-7 c-link" onClick={() => {onFileClick(file.id)}}>
+                  <span className="col-6 c-link" onClick={() => {onFileClick(file.id)}}>
                     {file.title}
                   </span>
                   <button
                     type="button"
-                    className="icon-button col-1"
+                    className="icon-button col-2"
                     onClick={
                       () => {
                         setEditStatus(file.id);
@@ -64,7 +64,7 @@ const FileList = ({
                   </button>
                   <button
                     type="button"
-                    className="icon-button col-1"
+                    className="icon-button col-2"
                     onClick={(() => {onFileDelete(file.id)})}
                   >
                     <FontAwesomeIcon title="删除" icon={faTrash} size="lg" />
