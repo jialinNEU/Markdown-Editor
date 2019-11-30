@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { faPlus, faFileImport } from '@fortawesome/free-solid-svg-icons';
 import SimpleMDE from 'react-simplemde-editor';
+import uuidv4 from 'uuid/v4';
 import FileSearch from './components/FileSearch';
 import FileList from './components/FileList';
 import BottomBtn from './components/BottomBtn';
@@ -74,6 +75,7 @@ const App = () => {
     const newFiles = files.map(file => {
       if (file.id === id) {
         file.title = title;
+        file.isNew = false;
       }
       return file;
     });
@@ -83,11 +85,21 @@ const App = () => {
   const fileSearch = (keyword) => {
     const newFiles = files.filter(file => file.title.includes(keyword));
     setSearchedFiles(newFiles);
-
   };
 
   const createNewFile = () => {
-
+    const newID = uuidv4();
+    const newFiles = [
+      ...files,
+      {
+        id: newID,
+        title: '',
+        body: '## 请输入 Markdown',
+        createdAt: new Date().getTime(),
+        isNew: true,
+      },
+    ];
+    setFiles(newFiles);
   };
 
   const importFiles = () => {
