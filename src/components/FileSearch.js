@@ -17,6 +17,7 @@ const FileSearch = ({
   const closeSearch = () => {
     setInputActive(false);
     setValue('');
+    onFileSearch('');
   };
 
   useEffect(() => {

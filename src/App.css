@@ -1,9 +1,36 @@
+/* Right Panel 样式 */
+.c-link {
+  cursor: pointer;
+}
+
+.start-page {
+  font-size: 30px;
+  line-height: 300px;
+  height: 300px;
+  color: #ccc;
+  text-align: center;
+}
+
+/* Left Panel 样式 */
+.left-panel {
+  min-height: 100vh;
+  position: relative;
+}
+
 .icon-button {
   background: none;
   border: none;
   color: inherit;
 }
 
-.c-link {
-  cursor: pointer;
+
+/* Button 样式 */
+.button-group {
+  position: absolute;
+  width: 100%;
+  bottom: 0;
+}
+
+.no-border {
+  border-radius: 0 !important;
 }

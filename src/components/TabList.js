@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import PropTypes from 'prop-types';
 import cx from 'classnames';
 import { faTimes} from '@fortawesome/free-solid-svg-icons';
@@ -48,6 +48,7 @@ const TabList = ({
                   <FontAwesomeIcon icon={faTimes} />
                 </span>
                 {
+                  // 未保存时，显示红点
                   withUnsavedMark && (
                     <span className="rounded-circle ml-2 unsaved-icon" />
                   )
