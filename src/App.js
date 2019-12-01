@@ -1,19 +1,39 @@
 import React, { useState } from 'react';
-import { faPlus, faFileImport } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faFileImport, faSave } from '@fortawesome/free-solid-svg-icons';
 import SimpleMDE from 'react-simplemde-editor';
 import uuidv4 from 'uuid/v4';
 import FileSearch from './components/FileSearch';
 import FileList from './components/FileList';
 import BottomBtn from './components/BottomBtn';
 import TabList from './components/TabList';
-import defaultFiles from './utils/defaultFiles';
+import fileHelper from './utils/fileHelper';
 import { flattenArr, objToArr } from './utils/helper';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import "easymde/dist/easymde.min.css"
 import './App.css';
 
+// require node.js modules
+const { join, basename, extname, dirname } = window.require('path');
+const { remote } = window.require('electron');
+const Store = window.require('electron-store');
+
+// 只持久化'索引信息'
+const fileStore = new Store({'name': 'Files Data'});
+
+const saveFilesToStore = (files) => {
+  const filesStoreObj = objToArr(files).reduce((result, file) => {
+    const { id, path, title , createdAt } = file;
+    result[id] = { id, path, title, createdAt };
+    return result;
+  }, {});
+  fileStore.set('files', filesStoreObj);
+};
+
+
+
+
 const App = () => {
-  const [ files, setFiles ] = useState(flattenArr(defaultFiles));
+  const [ files, setFiles ] = useState(fileStore.get('files') || {});
   const [ activeFileID, setActiveFileID ] = useState('');
   const [ openedFileIDs, setOpenedFileIDs ] = useState([]);
   const [ unsavedFileIDs, setUnsavedFileIDs ] = useState([]);
@@ -25,6 +45,9 @@ const App = () => {
   const openedFiles = openedFileIDs.map(openID => {
     return files[openID];
   });
+
+  // 通过 remote 获取 electron 主线程的方法
+  const savedLocation = remote.app.getPath('documents');
 
   /* callback methods */
 
@@ -45,6 +68,16 @@ const App = () => {
 
   const fileClick = (fileID) => {
     setActiveFileID(fileID);
+    // 点击 file 的同时，加载 file 内容
+    const currentFile = files[fileID];
+    if (!currentFile.isLoaded) {
+      fileHelper.readFile(currentFile.path).then(value => {
+        const newFile = { ...files[fileID], body: value, isLoaded: true };
+        setFiles({ ...files, [fileID]: newFile });
+        /* 此处不需要持久化，非索引信息 */
+      });
+    }
+
     // if openedFiles don't have the current ID, then add new fileID to openedFiles
     if (!openedFileIDs.includes(fileID)) {
       setOpenedFileIDs([ ...openedFileIDs, fileID ]);
@@ -61,15 +94,43 @@ const App = () => {
   };
 
   const deleteFile = (id) => {
-    delete files[id];
-    setFiles(files);
-    // 关闭要删除的文件的tab
-    tabClose(id);
+    if (files[id].isNew) {
+      const { [id]: value, ...afterDelete } = files;
+      setFiles(afterDelete);
+    } else {
+      fileHelper.deleteFile(files[id].path).then(() => {
+        const { [id]: value, ...afterDelete } = files;
+        setFiles(afterDelete);
+        // 持久化
+        saveFilesToStore(afterDelete);
+        // 关闭要删除的文件的tab
+        tabClose(id);
+      });
+    }
   };
 
-  const updateFileName = (id, title) => {
-    const modifiedFile = { ...files[id], title, isNew: false };
-    setFiles({ ...files, [id]: modifiedFile });
+  const updateFileName = (id, title, isNew) => {
+    // newPath 应该根据 isNew 的值而定
+    const newPath = isNew ? join(savedLocation, `${title}.md`) : join(dirname(files[id].path), `${title}.md`);
+    const modifiedFile = { ...files[id], title, isNew: false, path: newPath };
+    const newFiles = { ...files, [id]: modifiedFile };
+
+    if (isNew) {
+      // 新建，存入本地
+      fileHelper.writeFile(newPath, files[id].body).then(() => {
+        setFiles(newFiles);
+        // 持久化
+        saveFilesToStore(newFiles);
+      });
+    } else {
+      // 更新，存入本地
+      const oldPath = files[id].path;
+      fileHelper.renameFile(oldPath, newPath).then(() => {
+        setFiles(newFiles);
+        // 持久化
+        saveFilesToStore(newFiles);
+      });
+    }
   };
 
   const fileSearch = (keyword) => {
@@ -89,9 +150,57 @@ const App = () => {
     setFiles({ ...files, [newID]: newFile });
   };
 
-  const importFiles = () => {
-
+  const saveCurrentFile = () => {
+    fileHelper.writeFile(activeFile.path, activeFile.body).then(() => {
+      setUnsavedFileIDs(unsavedFileIDs.filter(id => id !== activeFile.id));
+    });
   };
+
+  const importFiles = () => {
+    remote.dialog.showOpenDialog({
+      title: '选择导入的 Markdown 文件',
+      properties: ['openFile', 'multiSelections'],
+      filters: [
+        { name: 'Markdown files', extensions: ['md'] },
+      ],
+    }).then((res) => {
+      const { filePaths } = res;
+      if (Array.isArray(filePaths)) {
+        // 过滤 electron-store 中已有的 path
+        const filteredFilePaths = filePaths.filter(path => {
+          const alreadyAdded = Object.values(files).find(file => {
+            return file.path === path;
+          });
+          return !alreadyAdded;
+        });
+        
+        // 增强 filePaths 数组，使其包含文件信息
+        const importFilesArr = filteredFilePaths.map(path => {
+          return {
+            id: uuidv4(),
+            title: basename(path, extname(path)),
+            path,
+          };
+        });
+
+        // flatten array
+        const newFiles = { ...files, ...flattenArr(importFilesArr) };
+
+        // 更新 state 和 store
+        setFiles(newFiles);
+        saveFilesToStore(newFiles);
+        if (importFilesArr.length > 0) {
+          remote.dialog.showMessageBox({
+            type: 'info',
+            title: `成功导入了${importFilesArr.length}个文件`,
+            message: `成功导入了${importFilesArr.length}个文件`,
+          });
+        }
+      }
+    });
+  };
+
+
 
   return (
     <div className="App container-fluid px-0">
@@ -139,6 +248,12 @@ const App = () => {
                   value={activeFile.body}
                   onChange={(value) => {fileChange(activeFile.id, value)}}
                   options={{ minHeight: '515px' }}
+                />
+                <BottomBtn
+                  text="保存"
+                  colorClass="btn-success"
+                  icon={faSave}
+                  onBtnClick={saveCurrentFile}
                 />
               </React.Fragment>
             )

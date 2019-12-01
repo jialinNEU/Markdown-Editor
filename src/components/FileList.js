@@ -4,6 +4,11 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEdit, faTrash, faTimes } from '@fortawesome/free-solid-svg-icons';
 import { faMarkdown } from '@fortawesome/free-brands-svg-icons';
 import useKeyPress from '../hooks/useKeyPress';
+import useContextMenu from '../hooks/useContextMenu';
+
+// 使用 electron 主进程的 Menu 方法
+const { remote } = window.require('electron');
+const { Menu, MenuItem } = remote;
 
 const FileList = ({
   files,
@@ -24,10 +29,30 @@ const FileList = ({
     }
   };
 
+  useContextMenu([
+    {
+      label: '打开',
+      click: () => {
+        console.log('打开');
+      },
+    }, {
+      label: '重命名',
+      click: () => {
+        console.log('重命名');
+      },
+    }, {
+      label: '删除',
+      click: () => {
+        console.log('删除');
+      },
+    }
+  ]);
+
+
   useEffect(() => {  // eslint-disable-line react-hooks/exhaustive-deps
     const editItem = files.find(file => file.id === editStatus);
     if (enterPressed && editStatus && value.trim() !== '') {
-      onSaveEdit(editItem.id, value);
+      onSaveEdit(editItem.id, value, editItem.isNew);
       setEditStatus(false);
       setValue('');
     }
