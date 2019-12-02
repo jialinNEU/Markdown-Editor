@@ -5,10 +5,11 @@ import { faEdit, faTrash, faTimes } from '@fortawesome/free-solid-svg-icons';
 import { faMarkdown } from '@fortawesome/free-brands-svg-icons';
 import useKeyPress from '../hooks/useKeyPress';
 import useContextMenu from '../hooks/useContextMenu';
+import { getParentNode } from '../utils/helper';
 
 // 使用 electron 主进程的 Menu 方法
-const { remote } = window.require('electron');
-const { Menu, MenuItem } = remote;
+// const { remote } = window.require('electron');
+// const { Menu, MenuItem } = remote;
 
 const FileList = ({
   files,
@@ -29,24 +30,35 @@ const FileList = ({
     }
   };
 
-  useContextMenu([
+  const clickedItem = useContextMenu([
     {
       label: '打开',
       click: () => {
-        console.log('打开');
+        const parentElement = getParentNode(clickedItem.current, 'file-item');
+        if (parentElement) {
+          onFileClick(parentElement.dataset.id);
+        }
       },
     }, {
       label: '重命名',
       click: () => {
-        console.log('重命名');
+        const parentElement = getParentNode(clickedItem.current, 'file-item');
+        if (parentElement) {
+          const { id, title } = parentElement.dataset;
+          setEditStatus(id);
+          setValue(title);
+        }
       },
     }, {
       label: '删除',
       click: () => {
-        console.log('删除');
+        const parentElement = getParentNode(clickedItem.current, 'file-item');
+        if (parentElement) {
+          onFileDelete(parentElement.dataset.id);
+        }
       },
     }
-  ]);
+  ], '.file-list', [files]);
 
 
   useEffect(() => {  // eslint-disable-line react-hooks/exhaustive-deps
@@ -75,7 +87,9 @@ const FileList = ({
         files.map(file => (
           <li
             key={file.id}
-            className="list-group-item bg-light row d-flex align-items-center mx-0"
+            data-id={file.id}
+            data-title={file.title}
+            className="list-group-item bg-light row d-flex align-items-center file-item mx-0"
           >
             {
               (file.id !== editStatus && !file.isNew) && (
