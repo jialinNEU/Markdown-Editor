@@ -19,7 +19,8 @@ const { remote } = window.require('electron');
 const Store = window.require('electron-store');
 
 // 只持久化'索引信息'
-const fileStore = new Store({'name': 'Files Data'});
+const fileStore = new Store({name: 'Files Data'});
+const settingStore = new Store({name: 'Settings'});
 
 const saveFilesToStore = (files) => {
   const filesStoreObj = objToArr(files).reduce((result, file) => {
@@ -46,7 +47,7 @@ const App = () => {
   });
 
   // 通过 remote 获取 electron 主线程的方法
-  const savedLocation = remote.app.getPath('documents');
+  const savedLocation = settingStore.get('savedFileLocation') || remote.app.getPath('documents');
 
   /* callback methods */
 
