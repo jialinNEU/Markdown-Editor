@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { faPlus, faFileImport, faSave } from '@fortawesome/free-solid-svg-icons';
+import React, { useState } from 'react';
+import { faPlus, faFileImport } from '@fortawesome/free-solid-svg-icons';
 import SimpleMDE from 'react-simplemde-editor';
 import uuidv4 from 'uuid/v4';
 import FileSearch from './components/FileSearch';
@@ -8,13 +8,14 @@ import BottomBtn from './components/BottomBtn';
 import TabList from './components/TabList';
 import fileHelper from './utils/fileHelper';
 import { flattenArr, objToArr } from './utils/helper';
+import useIpcRenderer from './hooks/useIpcRenderer';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import "easymde/dist/easymde.min.css"
 import './App.css';
 
 // require node.js modules
 const { join, basename, extname, dirname } = window.require('path');
-const { remote, ipcRenderer } = window.require('electron');
+const { remote } = window.require('electron');
 const Store = window.require('electron-store');
 
 // 只持久化'索引信息'
@@ -28,8 +29,6 @@ const saveFilesToStore = (files) => {
   }, {});
   fileStore.set('files', filesStoreObj);
 };
-
-
 
 
 const App = () => {
@@ -85,11 +84,13 @@ const App = () => {
   };
 
   const fileChange = (id, value) => {
-    const newFile = { ...files[id], body: value };
-    setFiles({ ...files, [id]: newFile });
-    // 更新 unsavedFileIDs
-    if (!unsavedFileIDs.includes(id)) {
-      setUnsavedFileIDs([ ...unsavedFileIDs, id ]);
+    if (value !== files[id].body) {
+      const newFile = { ...files[id], body: value };
+      setFiles({ ...files, [id]: newFile });
+      // 更新 unsavedFileIDs
+      if (!unsavedFileIDs.includes(id)) {
+        setUnsavedFileIDs([ ...unsavedFileIDs, id ]);
+      }
     }
   };
 
@@ -201,14 +202,10 @@ const App = () => {
   };
 
 
-  useEffect(() => {
-    const callback = () => {
-      console.log('hello from menu');
-    };
-    ipcRenderer.on('create-new-file', callback);
-    return () => {
-      ipcRenderer.removeListener('create-new-file', callback);
-    }
+  useIpcRenderer({
+    'create-new-file': createNewFile,
+    'import-file': importFiles,
+    'save-edit-file': saveCurrentFile,
   });
 
 
@@ -258,12 +255,6 @@ const App = () => {
                   value={activeFile.body}
                   onChange={(value) => {fileChange(activeFile.id, value)}}
                   options={{ minHeight: '515px' }}
-                />
-                <BottomBtn
-                  text="保存"
-                  colorClass="btn-success"
-                  icon={faSave}
-                  onBtnClick={saveCurrentFile}
                 />
               </React.Fragment>
             )

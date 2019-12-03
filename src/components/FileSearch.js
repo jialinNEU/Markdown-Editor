@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSearch, faTimes } from '@fortawesome/free-solid-svg-icons';
 import useKeyPress from '../hooks/useKeyPress';
+import useIpcRenderer from '../hooks/useIpcRenderer';
 
 const FileSearch = ({
   title,
@@ -13,6 +14,10 @@ const FileSearch = ({
   const enterPressed = useKeyPress(13);
   const escPressed = useKeyPress(27);
   let node = useRef(null);
+
+  const startSearch = () => {
+    setInputActive(true);
+  };
 
   const closeSearch = () => {
     setInputActive(false);
@@ -34,6 +39,10 @@ const FileSearch = ({
       node.current.focus();
     }
   }, [inputActive]);
+
+  useIpcRenderer({
+    'search-file': startSearch,
+  });
 
   return (
     <div className="alert alert-primary d-flex justify-content-between align-items-center mb-0">
